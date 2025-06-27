@@ -91,10 +91,8 @@ iot-camera-dashboard/
 ├── screenshots/          # Demo screenshots
 │   ├── dashboard.png
 │   ├── analysis.png
-│   └── mobile.png
-└── docs/                 # Additional documentation
-    ├── API.md            # API documentation
-    └── TROUBLESHOOTING.md # Common issues
+
+
 ```
 
 ## Installation
