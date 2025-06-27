@@ -1,0 +1,22 @@
+[Unit]
+Description=IoT Camera Client
+Documentation=https://github.com/yourusername/iot-camera-dashboard
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/iot-camera
+Environment=PATH=/home/pi/iot-camera/venv/bin
+ExecStart=/home/pi/iot-camera/venv/bin/python camera_client.py
+EnvironmentFile=/home/pi/iot-camera/config.env
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateT

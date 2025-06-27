@@ -33,38 +33,29 @@ Azure Blob Storage
 - Raspberry Pi with camera module
 - Internet connection
 
-## Installation
+## Quick Start
 
-### 1. Clone the Repository
+### 1. Clone Repository
 ```bash
 git clone https://github.com/yourusername/iot-camera-dashboard.git
 cd iot-camera-dashboard
 ```
 
-### 2. Configure Azure Services
+### 2. Setup Raspberry Pi (Automated)
+```bash
+# On your Raspberry Pi, run:
+curl -sSL https://raw.githubusercontent.com/yourusername/iot-camera-dashboard/main/raspberry-pi/install.sh | bash
 
-#### Azure IoT Hub Setup
-1. Create an Azure IoT Hub resource
-2. Register your Raspberry Pi device
-3. Get the connection string from IoT Hub → Settings → Shared access policies → service
+# Then configure with your Azure credentials:
+nano /home/pi/iot-camera/config.env
+```
 
-#### Azure Storage Setup  
-1. Create a Storage Account
-2. Create a container named `camera-images`
-3. Set container access level to "Blob (anonymous read access for blobs only)" for public access
-
-#### Azure Computer Vision Setup
-1. Create a Computer Vision resource
-2. Get the endpoint URL and API key
-
-### 3. Configuration
-
+### 3. Configure Web Dashboard
 Update the configuration in `index.php`:
-
 ```php
 $config = [
     'iot_hub_connection_string' => 'HostName=your-hub.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=your-key',
-    'device_id' => 'your-device-id',
+    'device_id' => 'raspberrypi',
     'iot_hub_name' => 'your-hub-name',
     'storage_account' => 'your-storage-account',
     'container' => 'camera-images',
@@ -73,63 +64,131 @@ $config = [
 ];
 ```
 
-### 4. Raspberry Pi Setup
+### 4. Deploy & Run
+```bash
+# Deploy web dashboard to your server
+# Start Pi camera service
+sudo systemctl start iot-camera
 
-Your Raspberry Pi should:
-1. Be connected to Azure IoT Hub
-2. Listen for `capture_image` method calls
-3. Capture images and upload to Azure Blob Storage with format: `analyzed_capture_YYYYMMDD_HHMMSS_XXXX.jpg`
-
-## Usage
-
-### Web Dashboard
-1. Deploy `index.php` to your web server (Apache/Nginx with PHP support)
-2. Access the dashboard in your browser
-3. Click "📷 Capture & Analyze Image" to:
-   - Send capture command to Raspberry Pi
-   - Wait for image upload to Azure Storage
-   - Perform AI analysis with Azure Computer Vision
-   - Display results with detailed insights
-
-### API Endpoints
-
-The dashboard provides REST API endpoints:
-
-- `GET /?api=status` - Get system status
-- `POST /?api=capture` - Trigger image capture
-- `GET /?api=real_analysis&filename=image.jpg` - Analyze specific image
-
-## Analysis Features
-
-### 🤖 AI Analysis Results
-- **Scene Description** - Natural language description of the image
-- **Object Detection** - Identified objects with confidence scores
-- **Image Tags** - Relevant tags categorized by confidence level
-- **Color Analysis** - Dominant colors and color scheme
-- **Scene Categories** - Scene classification
-- **Face Detection** - Number of people detected
-- **Brand Recognition** - Identified brands in the image
-
-### 📊 Confidence Scoring
-All analysis results include confidence percentages to help assess accuracy.
+# Access dashboard and click "Capture & Analyze Image"
+```
 
 ## File Structure
 
 ```
 iot-camera-dashboard/
-├── index.php              # Main dashboard application
+├── index.php              # Main web dashboard
 ├── README.md              # This file
-├── LICENSE                # License file
+├── LICENSE                # MIT License
 ├── .gitignore            # Git ignore rules
+├── SETUP.md              # Detailed setup guide
+├── raspberry-pi/         # Raspberry Pi camera client
+│   ├── camera_client.py  # Main Pi application
+│   ├── requirements.txt  # Python dependencies
+│   ├── install.sh        # Automated installer
+│   ├── iot-camera.service # Systemd service file
+│   └── README.md         # Pi-specific documentation
 ├── screenshots/          # Demo screenshots
 │   ├── dashboard.png
 │   ├── analysis.png
 │   └── mobile.png
 └── docs/                 # Additional documentation
-    ├── SETUP.md          # Detailed setup guide
     ├── API.md            # API documentation
-    └── TROUBLESHOOTING.md # Common issues and solutions
+    └── TROUBLESHOOTING.md # Common issues
 ```
+
+## Installation
+
+### Azure Services Setup
+
+#### 1. Azure IoT Hub
+```bash
+# Create IoT Hub
+az iot hub create --name your-iot-hub --resource-group your-rg --sku S1
+
+# Register Raspberry Pi device
+az iot hub device-identity create --hub-name your-iot-hub --device-id raspberrypi
+
+# Get connection string
+az iot hub connection-string show --hub-name your-iot-hub --policy-name service
+```
+
+#### 2. Azure Storage
+```bash
+# Create storage account
+az storage account create --name yourstorageaccount --resource-group your-rg --sku Standard_LRS
+
+# Create container with public access
+az storage container create --name camera-images --account-name yourstorageaccount --public-access blob
+```
+
+#### 3. Azure Computer Vision
+```bash
+# Create Computer Vision resource
+az cognitiveservices account create --name your-computer-vision --resource-group your-rg --kind ComputerVision --sku S1
+
+# Get API key and endpoint
+az cognitiveservices account keys list --name your-computer-vision --resource-group your-rg
+az cognitiveservices account show --name your-computer-vision --resource-group your-rg --query properties.endpoint
+```
+
+### Raspberry Pi Setup
+
+#### Automated Installation (Recommended)
+```bash
+curl -sSL https://raw.githubusercontent.com/yourusername/iot-camera-dashboard/main/raspberry-pi/install.sh | bash
+```
+
+#### Manual Installation
+See [raspberry-pi/README.md](raspberry-pi/README.md) for detailed instructions.
+
+### Web Dashboard Setup
+
+1. **Deploy to Web Server**
+   ```bash
+   # Apache/Nginx with PHP support required
+   cp index.php /var/www/html/
+   ```
+
+2. **Configure Credentials**
+   Update the `$config` array in `index.php` with your Azure credentials.
+
+3. **Set Permissions**
+   ```bash
+   sudo chown -R www-data:www-data /var/www/html/
+   sudo chmod 755 /var/www/html/index.php
+   ```
+
+## Usage
+
+### Web Dashboard
+1. Access the dashboard in your browser
+2. Click "📷 Capture & Analyze Image"
+3. Wait for image capture and AI analysis
+4. View results with detailed insights
+
+### API Endpoints
+- `GET /?api=status` - System status
+- `POST /?api=capture` - Trigger image capture
+- `GET /?api=real_analysis&filename=image.jpg` - Analyze image
+
+### Raspberry Pi Methods
+The Pi responds to these IoT Hub method calls:
+- `capture_image` - Capture and upload image
+- `get_device_info` - Get device status
+- `test_storage` - Test storage connectivity
+- `ping` - Connectivity test
+
+## Analysis Features
+
+### 🤖 AI Analysis Results
+- **Scene Description** - Natural language description
+- **Object Detection** - Objects with confidence scores
+- **Image Tags** - Categorized by confidence level
+- **Color Analysis** - Dominant colors and schemes
+- **Scene Categories** - Environment classification
+- **Face Detection** - People count
+- **Brand Recognition** - Identified brands
 
 ## Screenshots
 
@@ -139,43 +198,99 @@ iot-camera-dashboard/
 ### AI Analysis Results
 ![Analysis](screenshots/analysis.png)
 
-### Mobile View
-![Mobile](screenshots/mobile.png)
+
+## Configuration
+
+### Environment Variables (Recommended)
+```bash
+# Web Dashboard
+IOT_HUB_CONNECTION_STRING="HostName=..."
+COMPUTER_VISION_ENDPOINT="https://..."
+COMPUTER_VISION_KEY="your-key"
+
+# Raspberry Pi
+DEVICE_CONNECTION_STRING="HostName=...;DeviceId=raspberrypi;SharedAccessKey=..."
+STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=...;AccountKey=..."
+```
+
+### Debug Mode
+Enable debug information by changing CSS in `index.php`:
+```css
+.debug-info { display: block; }
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
 #### Image Not Displaying
-- Check if Azure Blob Storage container is public
-- Verify the image filename format matches Pi output
-- Ensure sufficient delay for image upload
+- ✅ Check Azure Blob Storage container is public
+- ✅ Verify image filename format
+- ✅ Ensure sufficient upload delay
 
 #### Analysis Fails
-- Verify Azure Computer Vision credentials
-- Check if image URL is accessible
-- Ensure image format is supported (JPG, PNG, GIF, BMP)
+- ✅ Verify Computer Vision credentials
+- ✅ Check image URL accessibility
+- ✅ Ensure supported image format
 
-#### Capture Command Fails
-- Verify IoT Hub connection string
-- Check if Raspberry Pi is online and connected
-- Ensure device ID matches registered device
+#### Pi Connection Issues
+- ✅ Verify IoT Hub connection string
+- ✅ Check device registration
+- ✅ Test network connectivity
+
+### Service Management
+```bash
+# Raspberry Pi service
+sudo systemctl status iot-camera
+sudo journalctl -u iot-camera -f
+
+# Web server logs
+sudo tail -f /var/log/apache2/error.log
+```
 
 ## Development
 
-### Debug Mode
-Enable debug information by changing CSS:
-```css
-.debug-info {
-    display: block; /* Change from 'none' to 'block' */
-}
+### Adding Features
+- **New Analysis**: Extend `formatRealAnalysis()` function
+- **UI Components**: Modify HTML/CSS sections
+- **API Endpoints**: Add cases to API switch statement
+- **Pi Methods**: Add handlers in `camera_client.py`
+
+### Testing
+```bash
+# Test Pi setup
+cd /home/pi/iot-camera && ./test.sh
+
+# Test Azure connectivity
+az iot hub device-identity show --hub-name your-hub --device-id raspberrypi
+
+# Manual method call
+az iot hub invoke-device-method --hub-name your-hub --device-id raspberrypi --method-name ping
 ```
 
-### Adding Features
-The codebase is modular and easy to extend:
-- Add new analysis features in `formatRealAnalysis()`
-- Extend UI components in the HTML/CSS sections
-- Add new API endpoints in the switch statement
+## Security
+
+### Best Practices
+- 🔐 Use environment variables for credentials
+- 🔄 Regularly rotate access keys
+- 📊 Monitor access logs
+- 🛡️ Use HTTPS in production
+- 🔒 Implement authentication for web dashboard
+
+### Network Security
+- Configure firewall rules
+- Use VPN for remote access
+- Implement rate limiting
+- Monitor for unauthorized access
+
+## Performance
+
+### Optimization Tips
+- Adjust image quality based on bandwidth
+- Implement result caching
+- Use CDN for static assets
+- Monitor resource usage
+- Optimize database queries (if added)
 
 ## Contributing
 
@@ -185,14 +300,34 @@ The codebase is modular and easy to extend:
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+### Development Setup
+```bash
+git clone https://github.com/yourusername/iot-camera-dashboard.git
+cd iot-camera-dashboard
+
+# Setup development environment
+# See SETUP.md for detailed instructions
+```
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Roadmap
+
+- [ ] Multi-device support
+- [ ] Real-time streaming
+- [ ] Mobile app
+- [ ] Advanced analytics dashboard
+- [ ] Machine learning model training
+- [ ] Edge AI processing
+- [ ] Notifications and alerts
+- [ ] Time-lapse functionality
 
 ## Acknowledgments
 
 - Azure IoT Hub for reliable device communication
 - Azure Computer Vision for powerful AI analysis
-- Bootstrap and modern CSS for responsive design
 - Open source community for inspiration and support
+- Raspberry Pi Foundation for amazing hardware
 

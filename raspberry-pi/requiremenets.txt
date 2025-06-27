@@ -1,0 +1,9 @@
+# Azure IoT SDK
+azure-iot-device==2.12.0
+
+# Azure Storage SDK
+azure-storage-blob==12.14.1
+
+# Additional dependencies
+asyncio
+pathlib
